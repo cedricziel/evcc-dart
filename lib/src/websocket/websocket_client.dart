@@ -2,12 +2,13 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:meta/meta.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
 
-import 'websocket_messages.dart';
+import 'websocket_state.dart';
 
 /// Exception thrown when a WebSocket operation fails.
 class EvccWebSocketException implements Exception {
@@ -57,12 +58,15 @@ class EvccWebSocketClient {
       WebSocketConnectionState.disconnected;
 
   /// The message controller.
-  final StreamController<EvccWebSocketMessage> _messageController =
-      StreamController<EvccWebSocketMessage>.broadcast();
+  final StreamController<Map<String, dynamic>> _messageController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   /// The connection state controller.
   final StreamController<WebSocketConnectionState> _connectionStateController =
       StreamController<WebSocketConnectionState>.broadcast();
+
+  /// The state cache.
+  final EvccWebSocketState state = EvccWebSocketState();
 
   /// Whether to automatically reconnect on disconnection.
   bool _autoReconnect = true;
@@ -91,8 +95,8 @@ class EvccWebSocketClient {
   Stream<WebSocketConnectionState> get connectionStateStream =>
       _connectionStateController.stream;
 
-  /// Returns a stream of WebSocket messages.
-  Stream<EvccWebSocketMessage> get messages => _messageController.stream;
+  /// Returns a stream of raw WebSocket messages.
+  Stream<Map<String, dynamic>> get messages => _messageController.stream;
 
   /// Sets the connection state and notifies listeners.
   @protected
@@ -165,10 +169,15 @@ class EvccWebSocketClient {
   void _onMessage(dynamic data) {
     if (data is String) {
       try {
-        final message = EvccWebSocketMessage.fromJsonString(data);
-        if (message != null) {
-          _messageController.add(message);
+        final json = jsonDecode(data) as Map<String, dynamic>;
+
+        // Update state with each key-value pair
+        for (final entry in json.entries) {
+          state.update(entry.key, entry.value);
         }
+
+        // Emit the raw message
+        _messageController.add(json);
       } catch (e) {
         // Ignore parsing errors
       }
@@ -216,6 +225,7 @@ class EvccWebSocketClient {
   /// Closes the WebSocket client and releases resources.
   Future<void> close() async {
     await disconnect();
+    state.dispose();
     await _messageController.close();
     await _connectionStateController.close();
   }

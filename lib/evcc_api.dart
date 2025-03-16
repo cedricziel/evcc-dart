@@ -10,6 +10,7 @@ export 'src/models/models.dart';
 export 'src/api/api.dart';
 export 'src/websocket/websocket_client.dart';
 export 'src/websocket/websocket_messages.dart';
+export 'src/websocket/websocket_state.dart';
 
 import 'src/client.dart';
 import 'src/api/api.dart';

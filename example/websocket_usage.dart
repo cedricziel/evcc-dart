@@ -25,144 +25,74 @@ void main() async {
     await api.ws.connect();
     print('Connected to WebSocket');
 
-    // Listen for all messages
-    final subscription = api.ws.messages.listen((message) {
-      print('Received message: $message');
+    // Listen for state updates
+    api.ws.state.updates.listen((state) {
+      print('State updated:');
 
-      // Handle different message types
-      if (message is FullStateMessage) {
-        // Handle the full state message received on initial connection
-        print('Received full state message:');
-        print('  Site: ${message.siteTitle}');
-        print('  Version: ${message.version}');
-        print('  Currency: ${message.currency}');
+      // Print system overview
+      print('System Overview:');
+      print('  Site: ${state['siteTitle']}');
+      print('  Version: ${state['version']}');
+      print('  Currency: ${state['currency']}');
+      print('  PV Power: ${state['pvPower']} W');
+      print('  Home Power: ${state['homePower']} W');
+      print('  Battery SoC: ${state['batterySoc']}%');
 
-        // Print system overview
-        print('System Overview:');
-        print('  PV Power: ${message.pvPower} W');
-        print('  Home Power: ${message.homePower} W');
-        print('  Battery SoC: ${message.batterySoc}%');
-
-        // Print loadpoint information
-        print('Loadpoints (${message.loadpointCount}):');
-        for (var i = 0; i < message.loadpointCount; i++) {
-          final props = message.getLoadpointProperties(i);
-          print('  Loadpoint $i:');
-          props.forEach((key, value) {
-            print('    $key: $value');
-          });
-        }
-
-        // Print tariff information
-        print('Tariffs:');
-        if (message.tariffGrid != null) {
-          print('  Grid: ${message.tariffGrid} ${message.currency}/kWh');
-        }
-        if (message.tariffCo2 != null) {
-          print('  CO2: ${message.tariffCo2} g/kWh');
-        }
-        if (message.tariffSolar != null) {
-          print('  Solar: ${message.tariffSolar} ${message.currency}/kWh');
-        }
-
-        // Print green share information
-        if (message.greenShareHome != null) {
-          print('  Green Share Home: ${message.greenShareHome! * 100}%');
-        }
-        if (message.greenShareLoadpoints != null) {
-          print(
-            '  Green Share Loadpoints: ${message.greenShareLoadpoints! * 100}%',
-          );
-        }
-      } else if (message is PvPowerMessage) {
-        print('PV Power: ${message.pvPower} W');
-      } else if (message is PvEnergyMessage) {
-        print('PV Energy: ${message.pvEnergy} Wh');
-      } else if (message is PvDetailsMessage) {
-        for (var i = 0; i < message.pv.length; i++) {
-          final detail = message.pv[i];
-          print(
-            'PV $i - Power: ${detail.power} W, Energy: ${detail.energy} Wh',
-          );
-        }
-      } else if (message is HomePowerMessage) {
-        print('Home Power: ${message.homePower} W');
-      } else if (message is LoadpointMessage) {
-        print(
-          'Loadpoint ${message.loadpointIndex} - ${message.property}: ${message.value}',
-        );
-      } else if (message is ForecastMessage) {
-        print('Forecast:');
-        print(
-          '  CO2: ${message.co2.length} periods, first: ${message.co2.first.price} g/kWh',
-        );
-        print(
-          '  Grid: ${message.grid.length} periods, first: ${message.grid.first.price} EUR/kWh',
-        );
-        print(
-          '  Solar today: ${message.solar.today.energy} Wh, complete: ${message.solar.today.complete}',
-        );
-        print(
-          '  Solar tomorrow: ${message.solar.tomorrow.energy} Wh, complete: ${message.solar.tomorrow.complete}',
-        );
-        print('  Solar timeseries: ${message.solar.timeseries.length} entries');
-      } else if (message is GreenShareHomeMessage) {
-        print('Green Share Home: ${message.percentage * 100}%');
-      } else if (message is GreenShareLoadpointsMessage) {
-        print('Green Share Loadpoints: ${message.percentage * 100}%');
-      } else if (message is TariffGridMessage) {
-        print('Tariff Grid: ${message.price} EUR/kWh');
-      } else if (message is TariffCo2Message) {
-        print('Tariff CO2: ${message.intensity} g/kWh');
-      } else if (message is TariffSolarMessage) {
-        print('Tariff Solar: ${message.price} EUR/kWh');
-      } else if (message is TariffPriceHomeMessage) {
-        print('Tariff Price Home: ${message.price} EUR/kWh');
-      } else if (message is TariffCo2HomeMessage) {
-        print('Tariff CO2 Home: ${message.intensity} g/kWh');
-      } else if (message is TariffPriceLoadpointsMessage) {
-        print('Tariff Price Loadpoints: ${message.price} EUR/kWh');
-      } else if (message is TariffCo2LoadpointsMessage) {
-        print('Tariff CO2 Loadpoints: ${message.intensity} g/kWh');
-      } else if (message is BatteryGridChargeActiveMessage) {
-        print('Battery Grid Charge Active: ${message.active}');
-      } else if (message is BatteryCapacityMessage) {
-        print('Battery Capacity: ${message.capacity} kWh');
-      } else if (message is BatterySocMessage) {
-        print('Battery SoC: ${message.soc}%');
-      } else if (message is BatteryPowerMessage) {
-        print('Battery Power: ${message.power} W');
-      } else if (message is BatteryEnergyMessage) {
-        print('Battery Energy: ${message.energy} Wh');
-      } else if (message is BatteryDetailsMessage) {
-        for (var i = 0; i < message.battery.length; i++) {
-          final detail = message.battery[i];
-          print(
-            'Battery $i - Power: ${detail.power} W, Capacity: ${detail.capacity} kWh, SoC: ${detail.soc}%, Controllable: ${detail.controllable}',
-          );
-        }
-      } else if (message is GridDetailsMessage) {
-        print(
-          'Grid - Power: ${message.grid.power} W, Energy: ${message.grid.energy} Wh',
-        );
-        print('  Powers: ${message.grid.powers}');
-        print('  Currents: ${message.grid.currents}');
-      } else if (message is LogMessage) {
-        print(
-          'Log - Level: ${message.log.level}, Message: ${message.log.message}',
-        );
-      } else if (message is AuxPowerMessage) {
-        print('Auxiliary Power: ${message.auxPower} W');
-      } else if (message is AuxDetailsMessage) {
-        for (var i = 0; i < message.aux.length; i++) {
-          final detail = message.aux[i];
-          print(
-            'Auxiliary Device $i - Power: ${detail.power} W, Energy: ${detail.energy} Wh',
-          );
-        }
-      } else if (message is GenericMessage) {
-        print('Generic message: ${message.data}');
+      // Print loadpoint information
+      final loadpointCount = api.ws.state.loadpointCount;
+      print('Loadpoints ($loadpointCount):');
+      for (var i = 0; i < loadpointCount; i++) {
+        final props = api.ws.state.getLoadpointProperties(i);
+        print('  Loadpoint $i:');
+        props.forEach((key, value) {
+          print('    $key: $value');
+        });
       }
+
+      // Print tariff information
+      print('Tariffs:');
+      if (state['tariffGrid'] != null) {
+        print('  Grid: ${state['tariffGrid']} ${state['currency']}/kWh');
+      }
+      if (state['tariffCo2'] != null) {
+        print('  CO2: ${state['tariffCo2']} g/kWh');
+      }
+      if (state['tariffSolar'] != null) {
+        print('  Solar: ${state['tariffSolar']} ${state['currency']}/kWh');
+      }
+
+      // Print green share information
+      if (state['greenShareHome'] != null) {
+        print('  Green Share Home: ${(state['greenShareHome'] as num) * 100}%');
+      }
+      if (state['greenShareLoadpoints'] != null) {
+        print(
+          '  Green Share Loadpoints: ${(state['greenShareLoadpoints'] as num) * 100}%',
+        );
+      }
+    });
+
+    // You can also use the helper getters on the state object
+    api.ws.state.updates.listen((_) {
+      print('\nUsing helper getters:');
+      print('  PV Power: ${api.ws.state.pvPower} W');
+      print('  Home Power: ${api.ws.state.homePower} W');
+      print('  Battery SoC: ${api.ws.state.batterySoc}%');
+      print('  Site Title: ${api.ws.state.siteTitle}');
+      print('  Currency: ${api.ws.state.currency}');
+    });
+
+    // For specific updates, you can listen to the raw message stream
+    api.ws.messages.where((msg) => msg.containsKey('pvPower')).listen((msg) {
+      print('\nPV Power update: ${msg['pvPower']} W');
+    });
+
+    api.ws.messages.where((msg) => msg.containsKey('homePower')).listen((msg) {
+      print('Home Power update: ${msg['homePower']} W');
+    });
+
+    api.ws.messages.where((msg) => msg.containsKey('batterySoc')).listen((msg) {
+      print('Battery SoC update: ${msg['batterySoc']}%');
     });
 
     // Keep the program running for 5 minutes
@@ -170,7 +100,6 @@ void main() async {
     await Future.delayed(Duration(minutes: 5));
 
     // Clean up
-    subscription.cancel();
     await api.ws.disconnect();
     await api.close();
     print('Disconnected from WebSocket');
@@ -180,468 +109,147 @@ void main() async {
   }
 }
 
-/// Example of filtering messages by type
-void filterMessagesByType(EvccWebSocketClient ws) {
-  // Filter for full state messages (received on initial connection)
-  final fullStateStream =
-      ws.messages
-          .where((message) => message is FullStateMessage)
-          .cast<FullStateMessage>();
-
-  fullStateStream.listen((message) {
-    print('Full state received:');
-    print('  Site: ${message.siteTitle}');
-    print('  Version: ${message.version}');
-    print('  Loadpoints: ${message.loadpointCount}');
-
-    // You can use this to initialize your application state
-    // when the WebSocket connection is established
-  });
-
-  // Filter for PV power messages
-  final pvPowerStream =
-      ws.messages
-          .where((message) => message is PvPowerMessage)
-          .cast<PvPowerMessage>();
-
-  pvPowerStream.listen((message) {
-    print('PV Power update: ${message.pvPower} W');
-  });
-
-  // Filter for home power messages
-  final homePowerStream =
-      ws.messages
-          .where((message) => message is HomePowerMessage)
-          .cast<HomePowerMessage>();
-
-  homePowerStream.listen((message) {
-    print('Home Power update: ${message.homePower} W');
-  });
-
-  // Filter for forecast messages
-  final forecastStream =
-      ws.messages
-          .where((message) => message is ForecastMessage)
-          .cast<ForecastMessage>();
-
-  forecastStream.listen((message) {
-    print('Forecast update:');
-    print('  Current grid price: ${message.grid.first.price} EUR/kWh');
-    print('  Current CO2 intensity: ${message.co2.first.price} g/kWh');
-    print('  Solar production today: ${message.solar.today.energy} Wh');
-  });
-
-  // Filter for green share messages
-  final greenShareHomeStream =
-      ws.messages
-          .where((message) => message is GreenShareHomeMessage)
-          .cast<GreenShareHomeMessage>();
-
-  greenShareHomeStream.listen((message) {
-    print('Green Share Home update: ${message.percentage * 100}%');
-  });
-
-  // Filter for tariff messages
-  final tariffGridStream =
-      ws.messages
-          .where((message) => message is TariffGridMessage)
-          .cast<TariffGridMessage>();
-
-  tariffGridStream.listen((message) {
-    print('Tariff Grid update: ${message.price} EUR/kWh');
-  });
-
-  final tariffCo2Stream =
-      ws.messages
-          .where((message) => message is TariffCo2Message)
-          .cast<TariffCo2Message>();
-
-  tariffCo2Stream.listen((message) {
-    print('Tariff CO2 update: ${message.intensity} g/kWh');
-  });
-
-  // Filter for battery messages
-  final batterySocStream =
-      ws.messages
-          .where((message) => message is BatterySocMessage)
-          .cast<BatterySocMessage>();
-
-  batterySocStream.listen((message) {
-    print('Battery SoC update: ${message.soc}%');
-  });
-
-  final batteryPowerStream =
-      ws.messages
-          .where((message) => message is BatteryPowerMessage)
-          .cast<BatteryPowerMessage>();
-
-  batteryPowerStream.listen((message) {
-    print('Battery Power update: ${message.power} W');
-  });
-
-  final batteryDetailsStream =
-      ws.messages
-          .where((message) => message is BatteryDetailsMessage)
-          .cast<BatteryDetailsMessage>();
-
-  batteryDetailsStream.listen((message) {
-    print('Battery Details update:');
-    for (var i = 0; i < message.battery.length; i++) {
-      final detail = message.battery[i];
-      print('  Battery $i - Power: ${detail.power} W, SoC: ${detail.soc}%');
-    }
-  });
-
-  // Filter for grid messages
-  final gridDetailsStream =
-      ws.messages
-          .where((message) => message is GridDetailsMessage)
-          .cast<GridDetailsMessage>();
-
-  gridDetailsStream.listen((message) {
-    print('Grid update:');
-    print('  Power: ${message.grid.power} W');
-    print('  Energy: ${message.grid.energy} Wh');
-  });
-
-  // Filter for log messages
-  final logStream =
-      ws.messages.where((message) => message is LogMessage).cast<LogMessage>();
-
-  logStream.listen((message) {
-    print('Log [${message.log.level}]: ${message.log.message}');
-  });
-
-  // Filter for auxiliary messages
-  final auxPowerStream =
-      ws.messages
-          .where((message) => message is AuxPowerMessage)
-          .cast<AuxPowerMessage>();
-
-  auxPowerStream.listen((message) {
-    print('Auxiliary Power update: ${message.auxPower} W');
-  });
-
-  final auxDetailsStream =
-      ws.messages
-          .where((message) => message is AuxDetailsMessage)
-          .cast<AuxDetailsMessage>();
-
-  auxDetailsStream.listen((message) {
-    print('Auxiliary Devices update:');
-    for (var i = 0; i < message.aux.length; i++) {
-      final detail = message.aux[i];
-      print('  Device $i - Power: ${detail.power} W, Energy: ${detail.energy} Wh');
-    }
-  });
-}
-
 /// Example of tracking state over time
 class StateTracker {
-  double? pvPower;
-  double? homePower;
-  final Map<int, Map<String, dynamic>> loadpointStates = {};
+  // Use the built-in state cache
+  final EvccWebSocketState state;
 
-  // Forecast data
-  double? currentGridPrice;
-  double? currentCo2Intensity;
-  double? solarTodayEnergy;
-  double? solarTomorrowEnergy;
+  StateTracker(this.state);
 
-  // Green share data
-  double? greenShareHome;
-  double? greenShareLoadpoints;
-
-  // Tariff data
-  double? tariffGrid;
-  double? tariffCo2;
-  double? tariffSolar;
-  double? tariffPriceHome;
-  double? tariffCo2Home;
-  double? tariffPriceLoadpoints;
-  double? tariffCo2Loadpoints;
-
-  // Battery data
-  double? batterySoc;
-  double? batteryPower;
-  double? batteryEnergy;
-  double? batteryCapacity;
-  bool? batteryGridChargeActive;
-  List<BatteryDetail>? batteryDetails;
-
-  // Grid data
-  GridData? gridData;
-
-  // Auxiliary data
-  double? auxPower;
-  List<AuxDetail>? auxDetails;
-
-  void trackState(EvccWebSocketClient ws) {
-    ws.messages.listen((message) {
-      if (message is FullStateMessage) {
-        // Initialize all state from the full state message
-        print('Initializing state from full state message...');
-
-        // Basic system data
-        pvPower = message.pvPower?.toDouble();
-        homePower = message.homePower?.toDouble();
-
-        // Battery data
-        if (message.batterySoc != null) {
-          // Battery state of charge is already a percentage
-          // No need to convert
-        }
-
-        // Tariff data
-        tariffGrid = message.tariffGrid?.toDouble();
-        tariffCo2 = message.tariffCo2?.toDouble();
-        tariffSolar = message.tariffSolar?.toDouble();
-        tariffPriceHome = message.tariffPriceHome?.toDouble();
-        tariffCo2Home = message.tariffCo2Home?.toDouble();
-        tariffPriceLoadpoints = message.tariffPriceLoadpoints?.toDouble();
-        tariffCo2Loadpoints = message.tariffCo2Loadpoints?.toDouble();
-
-        // Green share data
-        greenShareHome = message.greenShareHome?.toDouble();
-        greenShareLoadpoints = message.greenShareLoadpoints?.toDouble();
-
-        // Forecast data
-        if (message.forecast != null) {
-          if (message.forecast!.grid.isNotEmpty) {
-            currentGridPrice = message.forecast!.grid.first.price.toDouble();
-          }
-          if (message.forecast!.co2.isNotEmpty) {
-            currentCo2Intensity = message.forecast!.co2.first.price.toDouble();
-          }
-          solarTodayEnergy = message.forecast!.solar.today.energy.toDouble();
-          solarTomorrowEnergy =
-              message.forecast!.solar.tomorrow.energy.toDouble();
-        }
-
-        // Loadpoint data
-        for (var i = 0; i < message.loadpointCount; i++) {
-          loadpointStates[i] = message.getLoadpointProperties(i);
-        }
-
-        _printCurrentState();
-      } else if (message is PvPowerMessage) {
-        pvPower = message.pvPower.toDouble();
-        _printCurrentState();
-      } else if (message is HomePowerMessage) {
-        homePower = message.homePower.toDouble();
-        _printCurrentState();
-      } else if (message is LoadpointMessage) {
-        final index = message.loadpointIndex;
-        if (index >= 0) {
-          loadpointStates[index] ??= {};
-          loadpointStates[index]![message.property] = message.value;
-          _printCurrentState();
-        }
-      } else if (message is ForecastMessage) {
-        // Update forecast data
-        if (message.grid.isNotEmpty) {
-          currentGridPrice = message.grid.first.price.toDouble();
-        }
-        if (message.co2.isNotEmpty) {
-          currentCo2Intensity = message.co2.first.price.toDouble();
-        }
-        solarTodayEnergy = message.solar.today.energy.toDouble();
-        solarTomorrowEnergy = message.solar.tomorrow.energy.toDouble();
-        _printCurrentState();
-      } else if (message is GreenShareHomeMessage) {
-        greenShareHome = message.percentage.toDouble();
-        _printCurrentState();
-      } else if (message is GreenShareLoadpointsMessage) {
-        greenShareLoadpoints = message.percentage.toDouble();
-        _printCurrentState();
-      } else if (message is TariffGridMessage) {
-        tariffGrid = message.price.toDouble();
-        _printCurrentState();
-      } else if (message is TariffCo2Message) {
-        tariffCo2 = message.intensity.toDouble();
-        _printCurrentState();
-      } else if (message is TariffSolarMessage) {
-        tariffSolar = message.price.toDouble();
-        _printCurrentState();
-      } else if (message is TariffPriceHomeMessage) {
-        tariffPriceHome = message.price.toDouble();
-        _printCurrentState();
-      } else if (message is TariffCo2HomeMessage) {
-        tariffCo2Home = message.intensity.toDouble();
-        _printCurrentState();
-      } else if (message is TariffPriceLoadpointsMessage) {
-        tariffPriceLoadpoints = message.price.toDouble();
-        _printCurrentState();
-      } else if (message is TariffCo2LoadpointsMessage) {
-        tariffCo2Loadpoints = message.intensity.toDouble();
-        _printCurrentState();
-      } else if (message is BatteryGridChargeActiveMessage) {
-        batteryGridChargeActive = message.active;
-        _printCurrentState();
-      } else if (message is BatteryCapacityMessage) {
-        batteryCapacity = message.capacity.toDouble();
-        _printCurrentState();
-      } else if (message is BatterySocMessage) {
-        batterySoc = message.soc.toDouble();
-        _printCurrentState();
-      } else if (message is BatteryPowerMessage) {
-        batteryPower = message.power.toDouble();
-        _printCurrentState();
-      } else if (message is BatteryEnergyMessage) {
-        batteryEnergy = message.energy.toDouble();
-        _printCurrentState();
-      } else if (message is BatteryDetailsMessage) {
-        batteryDetails = message.battery;
-        _printCurrentState();
-      } else if (message is GridDetailsMessage) {
-        gridData = message.grid;
-        _printCurrentState();
-      } else if (message is AuxPowerMessage) {
-        auxPower = message.auxPower.toDouble();
-        _printCurrentState();
-      } else if (message is AuxDetailsMessage) {
-        auxDetails = message.aux;
-        _printCurrentState();
-      }
+  void trackState() {
+    state.updates.listen((currentState) {
+      printCurrentState();
     });
   }
 
-  void _printCurrentState() {
+  void printCurrentState() {
     print('Current State:');
-    print('  PV Power: ${pvPower ?? "unknown"} W');
-    print('  Home Power: ${homePower ?? "unknown"} W');
+    print('  PV Power: ${state.pvPower ?? "unknown"} W');
+    print('  Home Power: ${state.homePower ?? "unknown"} W');
 
     // Print forecast data if available
-    if (currentGridPrice != null ||
-        currentCo2Intensity != null ||
-        solarTodayEnergy != null) {
+    if (state.current.containsKey('forecast')) {
+      final forecast = state.current['forecast'] as Map<String, dynamic>;
       print('  Forecast:');
-      if (currentGridPrice != null) {
-        print('    Current Grid Price: $currentGridPrice EUR/kWh');
+
+      if (forecast.containsKey('grid') &&
+          forecast['grid'] is List &&
+          (forecast['grid'] as List).isNotEmpty) {
+        final grid = forecast['grid'] as List;
+        print('    Current Grid Price: ${grid.first['price']} EUR/kWh');
       }
-      if (currentCo2Intensity != null) {
-        print('    Current CO2 Intensity: $currentCo2Intensity g/kWh');
+
+      if (forecast.containsKey('co2') &&
+          forecast['co2'] is List &&
+          (forecast['co2'] as List).isNotEmpty) {
+        final co2 = forecast['co2'] as List;
+        print('    Current CO2 Intensity: ${co2.first['price']} g/kWh');
       }
-      if (solarTodayEnergy != null) {
-        print('    Solar Today: $solarTodayEnergy Wh');
-      }
-      if (solarTomorrowEnergy != null) {
-        print('    Solar Tomorrow: $solarTomorrowEnergy Wh');
+
+      if (forecast.containsKey('solar') &&
+          forecast['solar'] is Map<String, dynamic> &&
+          forecast['solar'].containsKey('today')) {
+        final solar = forecast['solar'] as Map<String, dynamic>;
+        final today = solar['today'] as Map<String, dynamic>;
+        print('    Solar Today: ${today['energy']} Wh');
       }
     }
 
     // Print green share data if available
-    if (greenShareHome != null || greenShareLoadpoints != null) {
+    if (state.greenShareHome != null || state.greenShareLoadpoints != null) {
       print('  Green Share:');
-      if (greenShareHome != null) {
-        print('    Home: ${(greenShareHome! * 100).toStringAsFixed(1)}%');
+      if (state.greenShareHome != null) {
+        print('    Home: ${(state.greenShareHome! * 100).toStringAsFixed(1)}%');
       }
-      if (greenShareLoadpoints != null) {
+      if (state.greenShareLoadpoints != null) {
         print(
-          '    Loadpoints: ${(greenShareLoadpoints! * 100).toStringAsFixed(1)}%',
+          '    Loadpoints: ${(state.greenShareLoadpoints! * 100).toStringAsFixed(1)}%',
         );
       }
     }
 
     // Print tariff data if available
-    if (tariffGrid != null ||
-        tariffCo2 != null ||
-        tariffSolar != null ||
-        tariffPriceHome != null ||
-        tariffCo2Home != null ||
-        tariffPriceLoadpoints != null ||
-        tariffCo2Loadpoints != null) {
+    if (state.tariffGrid != null ||
+        state.tariffCo2 != null ||
+        state.tariffSolar != null ||
+        state.tariffPriceHome != null ||
+        state.tariffCo2Home != null ||
+        state.tariffPriceLoadpoints != null ||
+        state.tariffCo2Loadpoints != null) {
       print('  Tariffs:');
-      if (tariffGrid != null) {
-        print('    Grid: $tariffGrid EUR/kWh');
+      if (state.tariffGrid != null) {
+        print('    Grid: ${state.tariffGrid} EUR/kWh');
       }
-      if (tariffCo2 != null) {
-        print('    CO2: $tariffCo2 g/kWh');
+      if (state.tariffCo2 != null) {
+        print('    CO2: ${state.tariffCo2} g/kWh');
       }
-      if (tariffSolar != null) {
-        print('    Solar: $tariffSolar EUR/kWh');
+      if (state.tariffSolar != null) {
+        print('    Solar: ${state.tariffSolar} EUR/kWh');
       }
-      if (tariffPriceHome != null) {
-        print('    Home Price: $tariffPriceHome EUR/kWh');
+      if (state.tariffPriceHome != null) {
+        print('    Home Price: ${state.tariffPriceHome} EUR/kWh');
       }
-      if (tariffCo2Home != null) {
-        print('    Home CO2: $tariffCo2Home g/kWh');
+      if (state.tariffCo2Home != null) {
+        print('    Home CO2: ${state.tariffCo2Home} g/kWh');
       }
-      if (tariffPriceLoadpoints != null) {
-        print('    Loadpoints Price: $tariffPriceLoadpoints EUR/kWh');
+      if (state.tariffPriceLoadpoints != null) {
+        print('    Loadpoints Price: ${state.tariffPriceLoadpoints} EUR/kWh');
       }
-      if (tariffCo2Loadpoints != null) {
-        print('    Loadpoints CO2: $tariffCo2Loadpoints g/kWh');
+      if (state.tariffCo2Loadpoints != null) {
+        print('    Loadpoints CO2: ${state.tariffCo2Loadpoints} g/kWh');
       }
     }
 
     // Print battery data if available
-    if (batterySoc != null ||
-        batteryPower != null ||
-        batteryEnergy != null ||
-        batteryCapacity != null ||
-        batteryGridChargeActive != null ||
-        batteryDetails != null) {
+    if (state.batterySoc != null ||
+        state.batteryPower != null ||
+        state.batteryEnergy != null) {
       print('  Battery:');
-      if (batterySoc != null) {
-        print('    SoC: ${batterySoc!.toStringAsFixed(1)}%');
+      if (state.batterySoc != null) {
+        print('    SoC: ${state.batterySoc!.toStringAsFixed(1)}%');
       }
-      if (batteryPower != null) {
-        print('    Power: $batteryPower W');
+      if (state.batteryPower != null) {
+        print('    Power: ${state.batteryPower} W');
       }
-      if (batteryEnergy != null) {
-        print('    Energy: $batteryEnergy Wh');
-      }
-      if (batteryCapacity != null) {
-        print('    Capacity: $batteryCapacity kWh');
-      }
-      if (batteryGridChargeActive != null) {
-        print('    Grid Charge Active: $batteryGridChargeActive');
-      }
-      if (batteryDetails != null) {
-        for (var i = 0; i < batteryDetails!.length; i++) {
-          final detail = batteryDetails![i];
-          print('    Battery $i:');
-          print('      Power: ${detail.power} W');
-          print('      Capacity: ${detail.capacity} kWh');
-          print('      SoC: ${detail.soc}%');
-          print('      Controllable: ${detail.controllable}');
-        }
+      if (state.batteryEnergy != null) {
+        print('    Energy: ${state.batteryEnergy} Wh');
       }
     }
 
-    // Print grid data if available
-    if (gridData != null) {
-      print('  Grid:');
-      print('    Power: ${gridData!.power} W');
-      print('    Energy: ${gridData!.energy} Wh');
-      print('    Powers: ${gridData!.powers}');
-      print('    Currents: ${gridData!.currents}');
-    }
-
-    // Print auxiliary data if available
-    if (auxPower != null || auxDetails != null) {
-      print('  Auxiliary:');
-      if (auxPower != null) {
-        print('    Power: $auxPower W');
-      }
-      if (auxDetails != null) {
-        for (var i = 0; i < auxDetails!.length; i++) {
-          final detail = auxDetails![i];
-          print('    Device $i:');
-          print('      Power: ${detail.power} W');
-          print('      Energy: ${detail.energy} Wh');
-        }
-      }
-    }
-
+    // Print loadpoint data
     print('  Loadpoints:');
-    for (final entry in loadpointStates.entries) {
-      print('    Loadpoint ${entry.key}:');
-      for (final prop in entry.value.entries) {
+    for (var i = 0; i < state.loadpointCount; i++) {
+      final props = state.getLoadpointProperties(i);
+      print('    Loadpoint $i:');
+      for (final prop in props.entries) {
         print('      ${prop.key}: ${prop.value}');
       }
     }
     print('');
   }
+}
+
+/// Example of using the state cache with specific data types
+void demonstrateStateUsage(EvccWebSocketClient ws) {
+  // Create a state tracker
+  final tracker = StateTracker(ws.state);
+  tracker.trackState();
+
+  // Listen for specific state changes
+  ws.state.updates.listen((state) {
+    if (state.containsKey('pvPower')) {
+      print('PV Power changed: ${state['pvPower']} W');
+    }
+  });
+
+  // Access specific properties directly
+  ws.state.updates.listen((_) {
+    if (ws.state.pvPower != null && ws.state.pvPower! > 1000) {
+      print('High PV production: ${ws.state.pvPower} W');
+    }
+
+    if (ws.state.batterySoc != null && ws.state.batterySoc! < 20) {
+      print('Low battery warning: ${ws.state.batterySoc}%');
+    }
+  });
 }
