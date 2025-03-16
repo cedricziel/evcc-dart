@@ -144,6 +144,7 @@ void main() {
 
       when(
         () => mockClient.post<Map<String, dynamic>>(
+          // ignore: dead_code
           '/settings/telemetry/${enable ? 'true' : 'false'}',
           converter: any(named: 'converter'),
         ),
@@ -154,6 +155,7 @@ void main() {
       expect(result, enable);
       verify(
         () => mockClient.post<Map<String, dynamic>>(
+          // ignore: dead_code
           '/settings/telemetry/${enable ? 'true' : 'false'}',
           converter: any(named: 'converter'),
         ),
