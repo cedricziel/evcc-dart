@@ -140,6 +140,32 @@ void main() {
       expect(result, 'PvDetail(power: 100, energy: 200)');
     });
 
+    test('AuxDetail toString should return a readable string', () {
+      // Arrange
+      final detail = AuxDetail(power: 200, energy: 500);
+
+      // Act
+      final result = detail.toString();
+
+      // Assert
+      expect(result, 'AuxDetail(power: 200, energy: 500)');
+    });
+
+    test('AuxDetailsMessage toString should return a readable string', () {
+      // Arrange
+      final aux = [
+        AuxDetail(power: 200, energy: 500),
+        AuxDetail(power: 50, energy: 300),
+      ];
+      final message = AuxDetailsMessage(aux);
+
+      // Act
+      final result = message.toString();
+
+      // Assert
+      expect(result, 'AuxDetailsMessage(aux: $aux)');
+    });
+
     test('LoadpointMessage should extract index and property correctly', () {
       // Arrange
       final message = LoadpointMessage('loadpoints.5.someProperty', 'value');
@@ -300,6 +326,37 @@ void main() {
         expect((message as TariffCo2LoadpointsMessage).intensity, 201.049);
       },
     );
+
+    test('fromJsonString should parse AuxPowerMessage correctly', () {
+      // Arrange
+      const jsonString = '{"auxPower":251.4}';
+
+      // Act
+      final message = EvccWebSocketMessage.fromJsonString(jsonString);
+
+      // Assert
+      expect(message, isA<AuxPowerMessage>());
+      expect((message as AuxPowerMessage).auxPower, 251.4);
+    });
+
+    test('fromJsonString should parse AuxDetailsMessage correctly', () {
+      // Arrange
+      const jsonString =
+          '{"aux":[{"power":203,"energy":581.64},{"power":48.4000015258789,"energy":288.810577392578}]}';
+
+      // Act
+      final message = EvccWebSocketMessage.fromJsonString(jsonString);
+
+      // Assert
+      expect(message, isA<AuxDetailsMessage>());
+
+      final auxMessage = message as AuxDetailsMessage;
+      expect(auxMessage.aux.length, 2);
+      expect(auxMessage.aux[0].power, 203);
+      expect(auxMessage.aux[0].energy, 581.64);
+      expect(auxMessage.aux[1].power, 48.4000015258789);
+      expect(auxMessage.aux[1].energy, 288.810577392578);
+    });
 
     test('fromJsonString should parse FullStateMessage correctly', () {
       // Arrange

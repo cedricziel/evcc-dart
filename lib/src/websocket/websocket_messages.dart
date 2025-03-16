@@ -75,6 +75,10 @@ abstract class EvccWebSocketMessage {
       return GridDetailsMessage.fromJson(json);
     } else if (json.containsKey('log')) {
       return LogMessage.fromJson(json);
+    } else if (json.containsKey('auxPower') && json.length == 1) {
+      return AuxPowerMessage(json['auxPower'] as num);
+    } else if (json.containsKey('aux') && json.length == 1) {
+      return AuxDetailsMessage.fromJson(json);
     }
 
     // Check for loadpoint messages
@@ -976,4 +980,60 @@ class LogData {
 
   @override
   String toString() => 'LogData(message: $message, level: $level)';
+}
+
+/// Auxiliary power message.
+class AuxPowerMessage extends EvccWebSocketMessage {
+  /// The auxiliary power in watts.
+  final num auxPower;
+
+  /// Creates a new auxiliary power message.
+  AuxPowerMessage(this.auxPower);
+
+  @override
+  String toString() => 'AuxPowerMessage(auxPower: $auxPower)';
+}
+
+/// Auxiliary device detail.
+class AuxDetail {
+  /// The power in watts.
+  final num power;
+
+  /// The energy in watt-hours.
+  final num energy;
+
+  /// Creates a new auxiliary device detail.
+  AuxDetail({required this.power, required this.energy});
+
+  /// Creates an auxiliary device detail from JSON.
+  factory AuxDetail.fromJson(Map<String, dynamic> json) {
+    return AuxDetail(
+      power: json['power'] as num,
+      energy: json['energy'] as num,
+    );
+  }
+
+  @override
+  String toString() => 'AuxDetail(power: $power, energy: $energy)';
+}
+
+/// Auxiliary devices details message.
+class AuxDetailsMessage extends EvccWebSocketMessage {
+  /// The auxiliary devices details.
+  final List<AuxDetail> aux;
+
+  /// Creates a new auxiliary devices details message.
+  AuxDetailsMessage(this.aux);
+
+  /// Creates an auxiliary devices details message from JSON.
+  factory AuxDetailsMessage.fromJson(Map<String, dynamic> json) {
+    final auxList =
+        (json['aux'] as List)
+            .map((e) => AuxDetail.fromJson(e as Map<String, dynamic>))
+            .toList();
+    return AuxDetailsMessage(auxList);
+  }
+
+  @override
+  String toString() => 'AuxDetailsMessage(aux: $aux)';
 }

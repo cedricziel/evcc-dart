@@ -151,6 +151,15 @@ void main() async {
         print(
           'Log - Level: ${message.log.level}, Message: ${message.log.message}',
         );
+      } else if (message is AuxPowerMessage) {
+        print('Auxiliary Power: ${message.auxPower} W');
+      } else if (message is AuxDetailsMessage) {
+        for (var i = 0; i < message.aux.length; i++) {
+          final detail = message.aux[i];
+          print(
+            'Auxiliary Device $i - Power: ${detail.power} W, Energy: ${detail.energy} Wh',
+          );
+        }
       } else if (message is GenericMessage) {
         print('Generic message: ${message.data}');
       }
@@ -302,6 +311,29 @@ void filterMessagesByType(EvccWebSocketClient ws) {
   logStream.listen((message) {
     print('Log [${message.log.level}]: ${message.log.message}');
   });
+
+  // Filter for auxiliary messages
+  final auxPowerStream =
+      ws.messages
+          .where((message) => message is AuxPowerMessage)
+          .cast<AuxPowerMessage>();
+
+  auxPowerStream.listen((message) {
+    print('Auxiliary Power update: ${message.auxPower} W');
+  });
+
+  final auxDetailsStream =
+      ws.messages
+          .where((message) => message is AuxDetailsMessage)
+          .cast<AuxDetailsMessage>();
+
+  auxDetailsStream.listen((message) {
+    print('Auxiliary Devices update:');
+    for (var i = 0; i < message.aux.length; i++) {
+      final detail = message.aux[i];
+      print('  Device $i - Power: ${detail.power} W, Energy: ${detail.energy} Wh');
+    }
+  });
 }
 
 /// Example of tracking state over time
@@ -339,6 +371,10 @@ class StateTracker {
 
   // Grid data
   GridData? gridData;
+
+  // Auxiliary data
+  double? auxPower;
+  List<AuxDetail>? auxDetails;
 
   void trackState(EvccWebSocketClient ws) {
     ws.messages.listen((message) {
@@ -460,6 +496,12 @@ class StateTracker {
       } else if (message is GridDetailsMessage) {
         gridData = message.grid;
         _printCurrentState();
+      } else if (message is AuxPowerMessage) {
+        auxPower = message.auxPower.toDouble();
+        _printCurrentState();
+      } else if (message is AuxDetailsMessage) {
+        auxDetails = message.aux;
+        _printCurrentState();
       }
     });
   }
@@ -575,6 +617,22 @@ class StateTracker {
       print('    Energy: ${gridData!.energy} Wh');
       print('    Powers: ${gridData!.powers}');
       print('    Currents: ${gridData!.currents}');
+    }
+
+    // Print auxiliary data if available
+    if (auxPower != null || auxDetails != null) {
+      print('  Auxiliary:');
+      if (auxPower != null) {
+        print('    Power: $auxPower W');
+      }
+      if (auxDetails != null) {
+        for (var i = 0; i < auxDetails!.length; i++) {
+          final detail = auxDetails![i];
+          print('    Device $i:');
+          print('      Power: ${detail.power} W');
+          print('      Energy: ${detail.energy} Wh');
+        }
+      }
     }
 
     print('  Loadpoints:');

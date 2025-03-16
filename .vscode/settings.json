@@ -5,6 +5,10 @@
         "buffersoc",
         "bufferstartsoc",
         "evcc",
+        "feedin",
+        "Loadpoint",
+        "Loadpoints",
+        "minpv",
         "prioritysoc",
         "residualpower"
     ]
