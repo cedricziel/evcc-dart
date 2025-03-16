@@ -300,5 +300,118 @@ void main() {
         expect((message as TariffCo2LoadpointsMessage).intensity, 201.049);
       },
     );
+
+    test('fromJsonString should parse FullStateMessage correctly', () {
+      // Arrange
+      const jsonString = '''
+      {
+        "currency":"EUR",
+        "version":"0.200.9",
+        "siteTitle":"Home",
+        "pvPower":180,
+        "pvEnergy":200.899,
+        "homePower":0,
+        "batterySoc":20,
+        "batteryPower":6,
+        "batteryEnergy":0,
+        "greenShareHome":1,
+        "greenShareLoadpoints":0.132,
+        "tariffGrid":0.196,
+        "tariffCo2":232,
+        "tariffSolar":1533.712,
+        "tariffPriceHome":0,
+        "tariffCo2Home":0,
+        "tariffPriceLoadpoints":0.17,
+        "tariffCo2Loadpoints":201.277,
+        "grid":{
+          "power":4.41,
+          "energy":2041.0303999999999,
+          "powers":[19.84,-40.83,25.4],
+          "currents":[0.34,-0.85,0.2]
+        },
+        "battery":[
+          {"power":6,"capacity":0,"soc":20,"controllable":false}
+        ],
+        "pv":[
+          {"power":0},
+          {"power":180,"energy":200.898864746094}
+        ],
+        "loadpoints.0.minCurrent":6,
+        "loadpoints.0.maxCurrent":16,
+        "loadpoints.0.charging":true,
+        "loadpoints.0.connected":true,
+        "loadpoints.0.vehicleSoc":61,
+        "loadpoints.0.vehicleName":"speedy"
+      }
+      ''';
+
+      // Act
+      final message = EvccWebSocketMessage.fromJsonString(jsonString);
+
+      // Assert
+      expect(message, isA<FullStateMessage>());
+
+      final fullStateMessage = message as FullStateMessage;
+      expect(fullStateMessage.version, '0.200.9');
+      expect(fullStateMessage.siteTitle, 'Home');
+      expect(fullStateMessage.currency, 'EUR');
+      expect(fullStateMessage.pvPower, 180);
+      expect(fullStateMessage.pvEnergy, 200.899);
+      expect(fullStateMessage.homePower, 0);
+      expect(fullStateMessage.batterySoc, 20);
+      expect(fullStateMessage.batteryPower, 6);
+      expect(fullStateMessage.batteryEnergy, 0);
+      expect(fullStateMessage.greenShareHome, 1);
+      expect(fullStateMessage.greenShareLoadpoints, 0.132);
+      expect(fullStateMessage.tariffGrid, 0.196);
+      expect(fullStateMessage.tariffCo2, 232);
+      expect(fullStateMessage.tariffSolar, 1533.712);
+      expect(fullStateMessage.tariffPriceHome, 0);
+      expect(fullStateMessage.tariffCo2Home, 0);
+      expect(fullStateMessage.tariffPriceLoadpoints, 0.17);
+      expect(fullStateMessage.tariffCo2Loadpoints, 201.277);
+
+      // Check grid data
+      expect(fullStateMessage.grid, isNotNull);
+      expect(fullStateMessage.grid!.power, 4.41);
+      expect(fullStateMessage.grid!.energy, 2041.0303999999999);
+      expect(fullStateMessage.grid!.powers, [19.84, -40.83, 25.4]);
+      expect(fullStateMessage.grid!.currents, [0.34, -0.85, 0.2]);
+
+      // Check battery data
+      expect(fullStateMessage.battery, isNotNull);
+      expect(fullStateMessage.battery!.length, 1);
+      expect(fullStateMessage.battery![0].power, 6);
+      expect(fullStateMessage.battery![0].capacity, 0);
+      expect(fullStateMessage.battery![0].soc, 20);
+      expect(fullStateMessage.battery![0].controllable, false);
+
+      // Check PV data
+      expect(fullStateMessage.pv, isNotNull);
+      expect(fullStateMessage.pv!.length, 2);
+      expect(fullStateMessage.pv![0].power, 0);
+      expect(fullStateMessage.pv![0].energy, null);
+      expect(fullStateMessage.pv![1].power, 180);
+      expect(fullStateMessage.pv![1].energy, 200.898864746094);
+
+      // Check loadpoint data
+      expect(fullStateMessage.loadpointCount, 1);
+      expect(fullStateMessage.getLoadpointProperty(0, 'minCurrent'), 6);
+      expect(fullStateMessage.getLoadpointProperty(0, 'maxCurrent'), 16);
+      expect(fullStateMessage.getLoadpointProperty(0, 'charging'), true);
+      expect(fullStateMessage.getLoadpointProperty(0, 'connected'), true);
+      expect(fullStateMessage.getLoadpointProperty(0, 'vehicleSoc'), 61);
+      expect(fullStateMessage.getLoadpointProperty(0, 'vehicleName'), 'speedy');
+
+      // Check loadpoint properties map
+      final loadpointProps = fullStateMessage.getLoadpointProperties(0);
+      expect(loadpointProps.length, 6);
+      expect(loadpointProps['minCurrent'], 6);
+      expect(loadpointProps['maxCurrent'], 16);
+      expect(loadpointProps['charging'], true);
+      expect(loadpointProps['connected'], true);
+      expect(loadpointProps['vehicleSoc'], 61);
+      expect(loadpointProps['vehicleName'], 'speedy');
+    });
   });
 }

@@ -20,6 +20,14 @@ abstract class EvccWebSocketMessage {
 
   /// Creates a message from a JSON map.
   static EvccWebSocketMessage? fromJson(Map<String, dynamic> json) {
+    // Check if this is a full state message
+    // Full state messages contain multiple key properties like version, siteTitle, etc.
+    if (json.containsKey('version') &&
+        json.containsKey('siteTitle') &&
+        json.containsKey('currency')) {
+      return FullStateMessage.fromJson(json);
+    }
+
     // Check for specific message types
     if (json.containsKey('pvPower')) {
       return PvPowerMessage(json['pvPower'] as num);
@@ -49,6 +57,24 @@ abstract class EvccWebSocketMessage {
       return TariffPriceLoadpointsMessage(json['tariffPriceLoadpoints'] as num);
     } else if (json.containsKey('tariffCo2Loadpoints')) {
       return TariffCo2LoadpointsMessage(json['tariffCo2Loadpoints'] as num);
+    } else if (json.containsKey('batteryGridChargeActive')) {
+      return BatteryGridChargeActiveMessage(
+        json['batteryGridChargeActive'] as bool,
+      );
+    } else if (json.containsKey('batteryCapacity')) {
+      return BatteryCapacityMessage(json['batteryCapacity'] as num);
+    } else if (json.containsKey('batterySoc') && json.length == 1) {
+      return BatterySocMessage(json['batterySoc'] as num);
+    } else if (json.containsKey('batteryPower') && json.length == 1) {
+      return BatteryPowerMessage(json['batteryPower'] as num);
+    } else if (json.containsKey('batteryEnergy') && json.length == 1) {
+      return BatteryEnergyMessage(json['batteryEnergy'] as num);
+    } else if (json.containsKey('battery') && json.length == 1) {
+      return BatteryDetailsMessage.fromJson(json);
+    } else if (json.containsKey('grid') && json.length == 1) {
+      return GridDetailsMessage.fromJson(json);
+    } else if (json.containsKey('log')) {
+      return LogMessage.fromJson(json);
     }
 
     // Check for loadpoint messages
@@ -444,4 +470,510 @@ class TariffCo2LoadpointsMessage extends EvccWebSocketMessage {
 
   @override
   String toString() => 'TariffCo2LoadpointsMessage(intensity: $intensity)';
+}
+
+/// Full state message received when the WebSocket client initially connects.
+/// Contains the complete system state.
+class FullStateMessage extends EvccWebSocketMessage {
+  /// The raw data from the full state message.
+  final Map<String, dynamic> data;
+
+  /// The system version.
+  final String version;
+
+  /// The site title.
+  final String siteTitle;
+
+  /// The currency used for pricing.
+  final String currency;
+
+  /// The PV power in watts.
+  final num? pvPower;
+
+  /// The PV energy in watt-hours.
+  final num? pvEnergy;
+
+  /// The home power in watts.
+  final num? homePower;
+
+  /// The battery state of charge (0-100).
+  final num? batterySoc;
+
+  /// The battery power in watts.
+  final num? batteryPower;
+
+  /// The battery energy in watt-hours.
+  final num? batteryEnergy;
+
+  /// The grid power in watts.
+  final GridData? grid;
+
+  /// The forecast data.
+  final ForecastMessage? forecast;
+
+  /// The statistics data.
+  final StatisticsData? statistics;
+
+  /// The green share of home energy (0-1).
+  final num? greenShareHome;
+
+  /// The green share of loadpoint energy (0-1).
+  final num? greenShareLoadpoints;
+
+  /// The grid electricity price in currency/kWh.
+  final num? tariffGrid;
+
+  /// The CO2 intensity of grid electricity in g/kWh.
+  final num? tariffCo2;
+
+  /// The solar electricity price/value in currency/kWh.
+  final num? tariffSolar;
+
+  /// The home electricity price in currency/kWh.
+  final num? tariffPriceHome;
+
+  /// The CO2 intensity of home electricity in g/kWh.
+  final num? tariffCo2Home;
+
+  /// The loadpoint electricity price in currency/kWh.
+  final num? tariffPriceLoadpoints;
+
+  /// The CO2 intensity of loadpoint electricity in g/kWh.
+  final num? tariffCo2Loadpoints;
+
+  /// The PV details.
+  final List<PvDetail>? pv;
+
+  /// The battery details.
+  final List<BatteryDetail>? battery;
+
+  /// Creates a new full state message.
+  FullStateMessage({
+    required this.data,
+    required this.version,
+    required this.siteTitle,
+    required this.currency,
+    this.pvPower,
+    this.pvEnergy,
+    this.homePower,
+    this.batterySoc,
+    this.batteryPower,
+    this.batteryEnergy,
+    this.grid,
+    this.forecast,
+    this.statistics,
+    this.greenShareHome,
+    this.greenShareLoadpoints,
+    this.tariffGrid,
+    this.tariffCo2,
+    this.tariffSolar,
+    this.tariffPriceHome,
+    this.tariffCo2Home,
+    this.tariffPriceLoadpoints,
+    this.tariffCo2Loadpoints,
+    this.pv,
+    this.battery,
+  });
+
+  /// Creates a full state message from JSON.
+  factory FullStateMessage.fromJson(Map<String, dynamic> json) {
+    // Extract forecast if present
+    ForecastMessage? forecastMessage;
+    if (json.containsKey('forecast')) {
+      forecastMessage = ForecastMessage.fromJson(json);
+    }
+
+    // Extract PV details if present
+    List<PvDetail>? pvDetails;
+    if (json.containsKey('pv')) {
+      pvDetails =
+          (json['pv'] as List)
+              .map((e) => PvDetail.fromJson(e as Map<String, dynamic>))
+              .toList();
+    }
+
+    // Extract battery details if present
+    List<BatteryDetail>? batteryDetails;
+    if (json.containsKey('battery')) {
+      batteryDetails =
+          (json['battery'] as List)
+              .map((e) => BatteryDetail.fromJson(e as Map<String, dynamic>))
+              .toList();
+    }
+
+    // Extract grid data if present
+    GridData? gridData;
+    if (json.containsKey('grid')) {
+      gridData = GridData.fromJson(json['grid'] as Map<String, dynamic>);
+    }
+
+    // Extract statistics if present
+    StatisticsData? statisticsData;
+    if (json.containsKey('statistics')) {
+      statisticsData = StatisticsData.fromJson(
+        json['statistics'] as Map<String, dynamic>,
+      );
+    }
+
+    return FullStateMessage(
+      data: json,
+      version: json['version'] as String,
+      siteTitle: json['siteTitle'] as String,
+      currency: json['currency'] as String,
+      pvPower: json['pvPower'] as num?,
+      pvEnergy: json['pvEnergy'] as num?,
+      homePower: json['homePower'] as num?,
+      batterySoc: json['batterySoc'] as num?,
+      batteryPower: json['batteryPower'] as num?,
+      batteryEnergy: json['batteryEnergy'] as num?,
+      grid: gridData,
+      forecast: forecastMessage,
+      statistics: statisticsData,
+      greenShareHome: json['greenShareHome'] as num?,
+      greenShareLoadpoints: json['greenShareLoadpoints'] as num?,
+      tariffGrid: json['tariffGrid'] as num?,
+      tariffCo2: json['tariffCo2'] as num?,
+      tariffSolar: json['tariffSolar'] as num?,
+      tariffPriceHome: json['tariffPriceHome'] as num?,
+      tariffCo2Home: json['tariffCo2Home'] as num?,
+      tariffPriceLoadpoints: json['tariffPriceLoadpoints'] as num?,
+      tariffCo2Loadpoints: json['tariffCo2Loadpoints'] as num?,
+      pv: pvDetails,
+      battery: batteryDetails,
+    );
+  }
+
+  /// Gets a loadpoint property by index and property name.
+  dynamic getLoadpointProperty(int index, String property) {
+    final key = 'loadpoints.$index.$property';
+    return data[key];
+  }
+
+  /// Gets all loadpoint properties for a specific index.
+  Map<String, dynamic> getLoadpointProperties(int index) {
+    final result = <String, dynamic>{};
+    final prefix = 'loadpoints.$index.';
+
+    for (final entry in data.entries) {
+      if (entry.key.startsWith(prefix)) {
+        final property = entry.key.substring(prefix.length);
+        result[property] = entry.value;
+      }
+    }
+
+    return result;
+  }
+
+  /// Gets the number of loadpoints in the system.
+  int get loadpointCount {
+    final loadpointIndices = <int>{};
+
+    for (final key in data.keys) {
+      if (key.startsWith('loadpoints.')) {
+        final match = RegExp(r'loadpoints\.(\d+)\.').firstMatch(key);
+        if (match != null) {
+          loadpointIndices.add(int.parse(match.group(1)!));
+        }
+      }
+    }
+
+    return loadpointIndices.length;
+  }
+
+  @override
+  String toString() =>
+      'FullStateMessage(version: $version, siteTitle: $siteTitle)';
+}
+
+/// Grid data.
+class GridData {
+  /// The power in watts.
+  final num power;
+
+  /// The energy in watt-hours.
+  final num energy;
+
+  /// The power per phase in watts.
+  final List<num> powers;
+
+  /// The current per phase in amperes.
+  final List<num> currents;
+
+  /// Creates a new grid data.
+  GridData({
+    required this.power,
+    required this.energy,
+    required this.powers,
+    required this.currents,
+  });
+
+  /// Creates grid data from JSON.
+  factory GridData.fromJson(Map<String, dynamic> json) {
+    return GridData(
+      power: json['power'] as num,
+      energy: json['energy'] as num,
+      powers: (json['powers'] as List).cast<num>(),
+      currents: (json['currents'] as List).cast<num>(),
+    );
+  }
+
+  @override
+  String toString() => 'GridData(power: $power, energy: $energy)';
+}
+
+/// Battery detail.
+class BatteryDetail {
+  /// The power in watts.
+  final num power;
+
+  /// The capacity in watt-hours.
+  final num capacity;
+
+  /// The state of charge (0-100).
+  final num soc;
+
+  /// Whether the battery is controllable.
+  final bool controllable;
+
+  /// Creates a new battery detail.
+  BatteryDetail({
+    required this.power,
+    required this.capacity,
+    required this.soc,
+    required this.controllable,
+  });
+
+  /// Creates a battery detail from JSON.
+  factory BatteryDetail.fromJson(Map<String, dynamic> json) {
+    return BatteryDetail(
+      power: json['power'] as num,
+      capacity: json['capacity'] as num,
+      soc: json['soc'] as num,
+      controllable: json['controllable'] as bool,
+    );
+  }
+
+  @override
+  String toString() =>
+      'BatteryDetail(power: $power, capacity: $capacity, soc: $soc, controllable: $controllable)';
+}
+
+/// Statistics data.
+class StatisticsData {
+  /// 30-day statistics.
+  final PeriodStatistics thirtyDays;
+
+  /// 365-day statistics.
+  final PeriodStatistics yearToDate;
+
+  /// This year's statistics.
+  final PeriodStatistics thisYear;
+
+  /// Total statistics.
+  final PeriodStatistics total;
+
+  /// Creates new statistics data.
+  StatisticsData({
+    required this.thirtyDays,
+    required this.yearToDate,
+    required this.thisYear,
+    required this.total,
+  });
+
+  /// Creates statistics data from JSON.
+  factory StatisticsData.fromJson(Map<String, dynamic> json) {
+    return StatisticsData(
+      thirtyDays: PeriodStatistics.fromJson(
+        json['30d'] as Map<String, dynamic>,
+      ),
+      yearToDate: PeriodStatistics.fromJson(
+        json['365d'] as Map<String, dynamic>,
+      ),
+      thisYear: PeriodStatistics.fromJson(
+        json['thisYear'] as Map<String, dynamic>,
+      ),
+      total: PeriodStatistics.fromJson(json['total'] as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  String toString() =>
+      'StatisticsData(thirtyDays: $thirtyDays, yearToDate: $yearToDate, thisYear: $thisYear, total: $total)';
+}
+
+/// Period statistics.
+class PeriodStatistics {
+  /// Average CO2 intensity in g/kWh.
+  final num avgCo2;
+
+  /// Average price in currency/kWh.
+  final num avgPrice;
+
+  /// Charged energy in kWh.
+  final num chargedKWh;
+
+  /// Percentage of solar energy.
+  final num solarPercentage;
+
+  /// Creates new period statistics.
+  PeriodStatistics({
+    required this.avgCo2,
+    required this.avgPrice,
+    required this.chargedKWh,
+    required this.solarPercentage,
+  });
+
+  /// Creates period statistics from JSON.
+  factory PeriodStatistics.fromJson(Map<String, dynamic> json) {
+    return PeriodStatistics(
+      avgCo2: json['avgCo2'] as num,
+      avgPrice: json['avgPrice'] as num,
+      chargedKWh: json['chargedKWh'] as num,
+      solarPercentage: json['solarPercentage'] as num,
+    );
+  }
+
+  @override
+  String toString() =>
+      'PeriodStatistics(avgCo2: $avgCo2, avgPrice: $avgPrice, chargedKWh: $chargedKWh, solarPercentage: $solarPercentage)';
+}
+
+/// Battery grid charge active message.
+class BatteryGridChargeActiveMessage extends EvccWebSocketMessage {
+  /// Whether battery grid charging is active.
+  final bool active;
+
+  /// Creates a new battery grid charge active message.
+  BatteryGridChargeActiveMessage(this.active);
+
+  @override
+  String toString() => 'BatteryGridChargeActiveMessage(active: $active)';
+}
+
+/// Battery capacity message.
+class BatteryCapacityMessage extends EvccWebSocketMessage {
+  /// The battery capacity in kWh.
+  final num capacity;
+
+  /// Creates a new battery capacity message.
+  BatteryCapacityMessage(this.capacity);
+
+  @override
+  String toString() => 'BatteryCapacityMessage(capacity: $capacity)';
+}
+
+/// Battery state of charge message.
+class BatterySocMessage extends EvccWebSocketMessage {
+  /// The battery state of charge (0-100).
+  final num soc;
+
+  /// Creates a new battery state of charge message.
+  BatterySocMessage(this.soc);
+
+  @override
+  String toString() => 'BatterySocMessage(soc: $soc)';
+}
+
+/// Battery power message.
+class BatteryPowerMessage extends EvccWebSocketMessage {
+  /// The battery power in watts.
+  final num power;
+
+  /// Creates a new battery power message.
+  BatteryPowerMessage(this.power);
+
+  @override
+  String toString() => 'BatteryPowerMessage(power: $power)';
+}
+
+/// Battery energy message.
+class BatteryEnergyMessage extends EvccWebSocketMessage {
+  /// The battery energy in watt-hours.
+  final num energy;
+
+  /// Creates a new battery energy message.
+  BatteryEnergyMessage(this.energy);
+
+  @override
+  String toString() => 'BatteryEnergyMessage(energy: $energy)';
+}
+
+/// Battery details message.
+class BatteryDetailsMessage extends EvccWebSocketMessage {
+  /// The battery details.
+  final List<BatteryDetail> battery;
+
+  /// Creates a new battery details message.
+  BatteryDetailsMessage(this.battery);
+
+  /// Creates a battery details message from JSON.
+  factory BatteryDetailsMessage.fromJson(Map<String, dynamic> json) {
+    final batteryList =
+        (json['battery'] as List)
+            .map((e) => BatteryDetail.fromJson(e as Map<String, dynamic>))
+            .toList();
+    return BatteryDetailsMessage(batteryList);
+  }
+
+  @override
+  String toString() => 'BatteryDetailsMessage(battery: $battery)';
+}
+
+/// Grid details message.
+class GridDetailsMessage extends EvccWebSocketMessage {
+  /// The grid data.
+  final GridData grid;
+
+  /// Creates a new grid details message.
+  GridDetailsMessage(this.grid);
+
+  /// Creates a grid details message from JSON.
+  factory GridDetailsMessage.fromJson(Map<String, dynamic> json) {
+    return GridDetailsMessage(
+      GridData.fromJson(json['grid'] as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  String toString() => 'GridDetailsMessage(grid: $grid)';
+}
+
+/// Log message.
+class LogMessage extends EvccWebSocketMessage {
+  /// The log data.
+  final LogData log;
+
+  /// Creates a new log message.
+  LogMessage(this.log);
+
+  /// Creates a log message from JSON.
+  factory LogMessage.fromJson(Map<String, dynamic> json) {
+    return LogMessage(LogData.fromJson(json['log'] as Map<String, dynamic>));
+  }
+
+  @override
+  String toString() => 'LogMessage(log: $log)';
+}
+
+/// Log data.
+class LogData {
+  /// The log message.
+  final String message;
+
+  /// The log level.
+  final String level;
+
+  /// Creates a new log data.
+  LogData({required this.message, required this.level});
+
+  /// Creates log data from JSON.
+  factory LogData.fromJson(Map<String, dynamic> json) {
+    return LogData(
+      message: json['message'] as String,
+      level: json['level'] as String,
+    );
+  }
+
+  @override
+  String toString() => 'LogData(message: $message, level: $level)';
 }

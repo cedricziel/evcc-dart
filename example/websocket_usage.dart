@@ -30,7 +30,51 @@ void main() async {
       print('Received message: $message');
 
       // Handle different message types
-      if (message is PvPowerMessage) {
+      if (message is FullStateMessage) {
+        // Handle the full state message received on initial connection
+        print('Received full state message:');
+        print('  Site: ${message.siteTitle}');
+        print('  Version: ${message.version}');
+        print('  Currency: ${message.currency}');
+
+        // Print system overview
+        print('System Overview:');
+        print('  PV Power: ${message.pvPower} W');
+        print('  Home Power: ${message.homePower} W');
+        print('  Battery SoC: ${message.batterySoc}%');
+
+        // Print loadpoint information
+        print('Loadpoints (${message.loadpointCount}):');
+        for (var i = 0; i < message.loadpointCount; i++) {
+          final props = message.getLoadpointProperties(i);
+          print('  Loadpoint $i:');
+          props.forEach((key, value) {
+            print('    $key: $value');
+          });
+        }
+
+        // Print tariff information
+        print('Tariffs:');
+        if (message.tariffGrid != null) {
+          print('  Grid: ${message.tariffGrid} ${message.currency}/kWh');
+        }
+        if (message.tariffCo2 != null) {
+          print('  CO2: ${message.tariffCo2} g/kWh');
+        }
+        if (message.tariffSolar != null) {
+          print('  Solar: ${message.tariffSolar} ${message.currency}/kWh');
+        }
+
+        // Print green share information
+        if (message.greenShareHome != null) {
+          print('  Green Share Home: ${message.greenShareHome! * 100}%');
+        }
+        if (message.greenShareLoadpoints != null) {
+          print(
+            '  Green Share Loadpoints: ${message.greenShareLoadpoints! * 100}%',
+          );
+        }
+      } else if (message is PvPowerMessage) {
         print('PV Power: ${message.pvPower} W');
       } else if (message is PvEnergyMessage) {
         print('PV Energy: ${message.pvEnergy} Wh');
@@ -80,6 +124,33 @@ void main() async {
         print('Tariff Price Loadpoints: ${message.price} EUR/kWh');
       } else if (message is TariffCo2LoadpointsMessage) {
         print('Tariff CO2 Loadpoints: ${message.intensity} g/kWh');
+      } else if (message is BatteryGridChargeActiveMessage) {
+        print('Battery Grid Charge Active: ${message.active}');
+      } else if (message is BatteryCapacityMessage) {
+        print('Battery Capacity: ${message.capacity} kWh');
+      } else if (message is BatterySocMessage) {
+        print('Battery SoC: ${message.soc}%');
+      } else if (message is BatteryPowerMessage) {
+        print('Battery Power: ${message.power} W');
+      } else if (message is BatteryEnergyMessage) {
+        print('Battery Energy: ${message.energy} Wh');
+      } else if (message is BatteryDetailsMessage) {
+        for (var i = 0; i < message.battery.length; i++) {
+          final detail = message.battery[i];
+          print(
+            'Battery $i - Power: ${detail.power} W, Capacity: ${detail.capacity} kWh, SoC: ${detail.soc}%, Controllable: ${detail.controllable}',
+          );
+        }
+      } else if (message is GridDetailsMessage) {
+        print(
+          'Grid - Power: ${message.grid.power} W, Energy: ${message.grid.energy} Wh',
+        );
+        print('  Powers: ${message.grid.powers}');
+        print('  Currents: ${message.grid.currents}');
+      } else if (message is LogMessage) {
+        print(
+          'Log - Level: ${message.log.level}, Message: ${message.log.message}',
+        );
       } else if (message is GenericMessage) {
         print('Generic message: ${message.data}');
       }
@@ -102,6 +173,22 @@ void main() async {
 
 /// Example of filtering messages by type
 void filterMessagesByType(EvccWebSocketClient ws) {
+  // Filter for full state messages (received on initial connection)
+  final fullStateStream =
+      ws.messages
+          .where((message) => message is FullStateMessage)
+          .cast<FullStateMessage>();
+
+  fullStateStream.listen((message) {
+    print('Full state received:');
+    print('  Site: ${message.siteTitle}');
+    print('  Version: ${message.version}');
+    print('  Loadpoints: ${message.loadpointCount}');
+
+    // You can use this to initialize your application state
+    // when the WebSocket connection is established
+  });
+
   // Filter for PV power messages
   final pvPowerStream =
       ws.messages
@@ -163,6 +250,58 @@ void filterMessagesByType(EvccWebSocketClient ws) {
   tariffCo2Stream.listen((message) {
     print('Tariff CO2 update: ${message.intensity} g/kWh');
   });
+
+  // Filter for battery messages
+  final batterySocStream =
+      ws.messages
+          .where((message) => message is BatterySocMessage)
+          .cast<BatterySocMessage>();
+
+  batterySocStream.listen((message) {
+    print('Battery SoC update: ${message.soc}%');
+  });
+
+  final batteryPowerStream =
+      ws.messages
+          .where((message) => message is BatteryPowerMessage)
+          .cast<BatteryPowerMessage>();
+
+  batteryPowerStream.listen((message) {
+    print('Battery Power update: ${message.power} W');
+  });
+
+  final batteryDetailsStream =
+      ws.messages
+          .where((message) => message is BatteryDetailsMessage)
+          .cast<BatteryDetailsMessage>();
+
+  batteryDetailsStream.listen((message) {
+    print('Battery Details update:');
+    for (var i = 0; i < message.battery.length; i++) {
+      final detail = message.battery[i];
+      print('  Battery $i - Power: ${detail.power} W, SoC: ${detail.soc}%');
+    }
+  });
+
+  // Filter for grid messages
+  final gridDetailsStream =
+      ws.messages
+          .where((message) => message is GridDetailsMessage)
+          .cast<GridDetailsMessage>();
+
+  gridDetailsStream.listen((message) {
+    print('Grid update:');
+    print('  Power: ${message.grid.power} W');
+    print('  Energy: ${message.grid.energy} Wh');
+  });
+
+  // Filter for log messages
+  final logStream =
+      ws.messages.where((message) => message is LogMessage).cast<LogMessage>();
+
+  logStream.listen((message) {
+    print('Log [${message.log.level}]: ${message.log.message}');
+  });
 }
 
 /// Example of tracking state over time
@@ -190,9 +329,66 @@ class StateTracker {
   double? tariffPriceLoadpoints;
   double? tariffCo2Loadpoints;
 
+  // Battery data
+  double? batterySoc;
+  double? batteryPower;
+  double? batteryEnergy;
+  double? batteryCapacity;
+  bool? batteryGridChargeActive;
+  List<BatteryDetail>? batteryDetails;
+
+  // Grid data
+  GridData? gridData;
+
   void trackState(EvccWebSocketClient ws) {
     ws.messages.listen((message) {
-      if (message is PvPowerMessage) {
+      if (message is FullStateMessage) {
+        // Initialize all state from the full state message
+        print('Initializing state from full state message...');
+
+        // Basic system data
+        pvPower = message.pvPower?.toDouble();
+        homePower = message.homePower?.toDouble();
+
+        // Battery data
+        if (message.batterySoc != null) {
+          // Battery state of charge is already a percentage
+          // No need to convert
+        }
+
+        // Tariff data
+        tariffGrid = message.tariffGrid?.toDouble();
+        tariffCo2 = message.tariffCo2?.toDouble();
+        tariffSolar = message.tariffSolar?.toDouble();
+        tariffPriceHome = message.tariffPriceHome?.toDouble();
+        tariffCo2Home = message.tariffCo2Home?.toDouble();
+        tariffPriceLoadpoints = message.tariffPriceLoadpoints?.toDouble();
+        tariffCo2Loadpoints = message.tariffCo2Loadpoints?.toDouble();
+
+        // Green share data
+        greenShareHome = message.greenShareHome?.toDouble();
+        greenShareLoadpoints = message.greenShareLoadpoints?.toDouble();
+
+        // Forecast data
+        if (message.forecast != null) {
+          if (message.forecast!.grid.isNotEmpty) {
+            currentGridPrice = message.forecast!.grid.first.price.toDouble();
+          }
+          if (message.forecast!.co2.isNotEmpty) {
+            currentCo2Intensity = message.forecast!.co2.first.price.toDouble();
+          }
+          solarTodayEnergy = message.forecast!.solar.today.energy.toDouble();
+          solarTomorrowEnergy =
+              message.forecast!.solar.tomorrow.energy.toDouble();
+        }
+
+        // Loadpoint data
+        for (var i = 0; i < message.loadpointCount; i++) {
+          loadpointStates[i] = message.getLoadpointProperties(i);
+        }
+
+        _printCurrentState();
+      } else if (message is PvPowerMessage) {
         pvPower = message.pvPower.toDouble();
         _printCurrentState();
       } else if (message is HomePowerMessage) {
@@ -242,6 +438,27 @@ class StateTracker {
         _printCurrentState();
       } else if (message is TariffCo2LoadpointsMessage) {
         tariffCo2Loadpoints = message.intensity.toDouble();
+        _printCurrentState();
+      } else if (message is BatteryGridChargeActiveMessage) {
+        batteryGridChargeActive = message.active;
+        _printCurrentState();
+      } else if (message is BatteryCapacityMessage) {
+        batteryCapacity = message.capacity.toDouble();
+        _printCurrentState();
+      } else if (message is BatterySocMessage) {
+        batterySoc = message.soc.toDouble();
+        _printCurrentState();
+      } else if (message is BatteryPowerMessage) {
+        batteryPower = message.power.toDouble();
+        _printCurrentState();
+      } else if (message is BatteryEnergyMessage) {
+        batteryEnergy = message.energy.toDouble();
+        _printCurrentState();
+      } else if (message is BatteryDetailsMessage) {
+        batteryDetails = message.battery;
+        _printCurrentState();
+      } else if (message is GridDetailsMessage) {
+        gridData = message.grid;
         _printCurrentState();
       }
     });
@@ -314,6 +531,50 @@ class StateTracker {
       if (tariffCo2Loadpoints != null) {
         print('    Loadpoints CO2: $tariffCo2Loadpoints g/kWh');
       }
+    }
+
+    // Print battery data if available
+    if (batterySoc != null ||
+        batteryPower != null ||
+        batteryEnergy != null ||
+        batteryCapacity != null ||
+        batteryGridChargeActive != null ||
+        batteryDetails != null) {
+      print('  Battery:');
+      if (batterySoc != null) {
+        print('    SoC: ${batterySoc!.toStringAsFixed(1)}%');
+      }
+      if (batteryPower != null) {
+        print('    Power: $batteryPower W');
+      }
+      if (batteryEnergy != null) {
+        print('    Energy: $batteryEnergy Wh');
+      }
+      if (batteryCapacity != null) {
+        print('    Capacity: $batteryCapacity kWh');
+      }
+      if (batteryGridChargeActive != null) {
+        print('    Grid Charge Active: $batteryGridChargeActive');
+      }
+      if (batteryDetails != null) {
+        for (var i = 0; i < batteryDetails!.length; i++) {
+          final detail = batteryDetails![i];
+          print('    Battery $i:');
+          print('      Power: ${detail.power} W');
+          print('      Capacity: ${detail.capacity} kWh');
+          print('      SoC: ${detail.soc}%');
+          print('      Controllable: ${detail.controllable}');
+        }
+      }
+    }
+
+    // Print grid data if available
+    if (gridData != null) {
+      print('  Grid:');
+      print('    Power: ${gridData!.power} W');
+      print('    Energy: ${gridData!.energy} Wh');
+      print('    Powers: ${gridData!.powers}');
+      print('    Currents: ${gridData!.currents}');
     }
 
     print('  Loadpoints:');
