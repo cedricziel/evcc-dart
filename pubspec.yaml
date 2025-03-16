@@ -12,6 +12,7 @@ dependencies:
   http: ^1.2.0
   meta: ^1.0.0
   uri: ^1.0.0
+  web_socket_channel: ^2.4.0
 
 dev_dependencies:
   lints: ^5.0.0

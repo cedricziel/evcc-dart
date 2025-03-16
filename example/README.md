@@ -20,6 +20,7 @@ Make sure to update the EVCC API URL and credentials in each example to match yo
 - **battery_management.dart**: Demonstrates home battery control and configuration.
 - **tariffs_and_sessions.dart**: Shows how to work with electricity tariffs and charging sessions.
 - **system_operations.dart**: Illustrates system operations like log retrieval and telemetry management.
+- **websocket_usage.dart**: Shows how to use the WebSocket API to receive real-time updates about the system state.
 
 ## Notes
 

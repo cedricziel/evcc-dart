@@ -51,6 +51,85 @@ final api = EvccApi(
 
 ## Usage Examples
 
+### WebSocket API
+
+The EVCC WebSocket API provides real-time updates about the system state. You can use the WebSocket client to receive these updates:
+
+```dart
+// Initialize the API client
+final api = EvccApi(baseUrl: 'http://192.168.1.100:7070/api');
+
+// Connect to WebSocket
+await api.ws.connect();
+
+// Listen for all messages
+api.ws.messages.listen((message) {
+  if (message is PvPowerMessage) {
+    print('PV Power: ${message.pvPower} W');
+  } else if (message is HomePowerMessage) {
+    print('Home Power: ${message.homePower} W');
+  } else if (message is LoadpointMessage) {
+    print('Loadpoint ${message.loadpointIndex} - ${message.property}: ${message.value}');
+  } else if (message is ForecastMessage) {
+    print('Forecast:');
+    print('  Grid price: ${message.grid.first.price} EUR/kWh');
+    print('  CO2 intensity: ${message.co2.first.price} g/kWh');
+    print('  Solar today: ${message.solar.today.energy} Wh');
+  }
+});
+
+// Disconnect when done
+await api.ws.disconnect();
+await api.close();
+```
+
+You can also filter messages by type:
+
+```dart
+// Filter for PV power messages
+final pvPowerStream = api.ws.messages
+    .where((message) => message is PvPowerMessage)
+    .cast<PvPowerMessage>();
+
+pvPowerStream.listen((message) {
+  print('PV Power update: ${message.pvPower} W');
+});
+
+// Filter for forecast messages
+final forecastStream = api.ws.messages
+    .where((message) => message is ForecastMessage)
+    .cast<ForecastMessage>();
+
+forecastStream.listen((message) {
+  print('Current grid price: ${message.grid.first.price} EUR/kWh');
+  print('Solar production forecast: ${message.solar.tomorrow.energy} Wh');
+});
+```
+
+#### WebSocket Message Types
+
+The WebSocket API provides the following message types:
+
+- **PvPowerMessage**: Current PV power in watts
+- **PvEnergyMessage**: Total PV energy in watt-hours
+- **PvDetailsMessage**: Detailed PV information with power and energy for each inverter
+- **HomePowerMessage**: Current home power consumption in watts
+- **LoadpointMessage**: Updates about charging stations (mode, status, power, etc.)
+- **ForecastMessage**: Forecast data including:
+  - Grid pricing forecast (EUR/kWh)
+  - CO2 emissions forecast (g/kWh)
+  - Solar production forecast (today, tomorrow, and detailed timeseries)
+- **GreenShareHomeMessage**: Percentage of home energy from green sources
+- **GreenShareLoadpointsMessage**: Percentage of loadpoint energy from green sources
+- **TariffGridMessage**: Grid electricity price in currency/kWh
+- **TariffCo2Message**: CO2 intensity of grid electricity in g/kWh
+- **TariffSolarMessage**: Solar electricity price/value in currency/kWh
+- **TariffPriceHomeMessage**: Home electricity price in currency/kWh
+- **TariffCo2HomeMessage**: CO2 intensity of home electricity in g/kWh
+- **TariffPriceLoadpointsMessage**: Loadpoint electricity price in currency/kWh
+- **TariffCo2LoadpointsMessage**: CO2 intensity of loadpoint electricity in g/kWh
+- **GenericMessage**: Any other message type not specifically modeled
+
 ### Authentication
 
 ```dart
